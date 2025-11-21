@@ -1,35 +1,34 @@
-from flask import Flask, render_template, request, jsonify
-from LLM_QA_CLI import preprocess_text, query_llm
 import os
+from flask import Flask, request, jsonify
+from google.generativeai import Client
+from dotenv import load_dotenv
+
+# Load environment variables from .env locally
+load_dotenv()
 
 app = Flask(__name__)
 
-@app.route('/')
+# Example: initialize Google Generative AI client
+# Make sure you set your API key in .env as GOOGLE_API_KEY
+client = Client(api_key=os.environ.get("GOOGLE_API_KEY"))
+
+# Example route
+@app.route("/")
 def home():
-    return render_template('index.html')
+    return "Hello! Flask app is running on Render 🚀"
 
-@app.route('/ask', methods=['POST'])
-def ask():
-    data = request.get_json()
-    question = data.get('question', '')
+# Example route using generative AI
+@app.route("/generate", methods=["POST"])
+def generate_text():
+    data = request.json
+    prompt = data.get("prompt", "")
+    if not prompt:
+        return jsonify({"error": "No prompt provided"}), 400
     
-    if not question:
-        return jsonify({'error': 'No question provided'}), 400
+    # Example usage of Google Generative AI (adjust as needed)
+    response = client.generate_text(model="text-bison-001", prompt=prompt)
+    return jsonify({"result": response.text})
 
-    # Process the question
-    processed_question = preprocess_text(question)
-    
-    # Get answer from LLM
-    # Note: We are sending the processed question to the LLM as per the CLI logic we established.
-    # If you prefer sending the raw question for better quality, you can change this to query_llm(question)
-    answer = query_llm(processed_question)
-    
-    return jsonify({
-        'processed_question': processed_question,
-        'answer': answer
-    })
-
-if __name__ == '__main__':
-    # Run the app
-    # debug=True for development
-    app.run(debug=True, port=5000)
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 5000))  # Render sets PORT; fallback to 5000 locally
+    app.run(host="0.0.0.0", port=port)
